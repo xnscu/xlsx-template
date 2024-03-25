@@ -68,6 +68,17 @@
     "typescript": "^3.9.7"
   },
   "scripts": {
+    "commit": "git add . && git commit -am ",
+    "c": "yarn commit",
+    "push": "yarn commit",
+    "_push_p": "git push p master",
+    "_push_p_migrate": "git push p master --push-option=migrate:commit",
+    "_push": "git push origin master",
+    "_pull": "git pull origin master",
+    "pull": "uname -s | grep -q Darwin && yarn _pull || while true; do timeout 10 yarn _pull && break; done",
+    "postpush": "uname -s | grep -q Darwin && yarn _push || while true; do timeout 10 yarn _push && break; done",
+    "g": "yarn commit",
+    "postg": "yarn postpush",
     "compile": "tsc",
     "test": "npm run compile && jest",
     "rc": "git add . &&  git commit -am",
