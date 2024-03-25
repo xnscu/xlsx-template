@@ -1,0 +1,19 @@
+{
+  "compilerOptions": {
+    "target": "es5",
+    "module": "commonjs",
+    "allowJs": true,
+    "checkJs": true,
+    "noEmit": false,
+    "strict": false,
+    "noImplicitAny": false,
+    "alwaysStrict": true,
+    "esModuleInterop": true,
+    "outDir": "lib",
+    "sourceMap": true
+  }, 
+  "files": [
+    "src/index.js",
+    "src/augment.d.ts"
+  ]
+}

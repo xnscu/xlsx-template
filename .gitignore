@@ -1,0 +1,13 @@
+.DS_Store
+*.swp
+node_modules/
+*.log
+extract/
+checkouts
+.idea/
+atlassian-ide-plugin.xml
+.vs/
+lib/*.js
+lib/*.d.ts
+!lib/index.d.ts
+*.map
