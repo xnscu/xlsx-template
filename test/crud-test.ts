@@ -602,6 +602,57 @@ describe("CRUD operations", function() {
 
         });
 
+        it("moves rows down when filling tables with merged line cell", function(done) {
+
+            fs.readFile(path.join(__dirname, "templates", "test-tables-merged-line.xlsx"), function(err, data) {
+                expect(err).toBeNull();
+
+                var t = new XlsxTemplate(data);
+
+                t.substitute("Tables", {
+                    score_first: {name: "Jason", score: 1},
+                    scores: [
+                        {name: "John", score: 100, extra:'O'},
+                        {name: "Bob", score: 110, extra:'O'}, 
+                        {name: "Jim", score: 120, extra:'O'}
+                    ],
+                    score_last: {name: "Fox", score: 99},
+
+                    score2_first: {name: "Daddy", score: 1},
+                    scores2: [
+                        {name: "Son1", score: 100, extra:'O'},
+                        {name: "Son2", score: 110, extra:'O'}, 
+                        {name: "Son3", score: 120, extra:'O'},
+                        {name: "Son4", score: 130, extra:'O'}
+                    ],
+                    score2_last: {name: "Mom", score: 99},
+                });
+
+                var newData = t.generate();
+
+                var sharedStrings = etree.parse(t.archive.file("xl/sharedStrings.xml").asText()).getroot(),
+                    sheet1        = etree.parse(t.archive.file("xl/worksheets/sheet1.xml").asText()).getroot();
+
+                expect(sheet1.find("./sheetData/row[@r='8']/c[@r='B8']").attrib.s).toEqual("3");
+                expect(sheet1.find("./sheetData/row[@r='8']/c[@r='B8']/v").text).toEqual("23");
+                expect(sheet1.find("./sheetData/row[@r='8']/c[@r='C8']").attrib.s).toEqual("4");
+
+                expect(sheet1.find("./sheetData/row[@r='8']/c[@r='D8']").attrib.s).toEqual("5");
+                expect(sheet1.find("./sheetData/row[@r='8']/c[@r='E8']").attrib.s).toEqual("6");
+                expect(sheet1.find("./sheetData/row[@r='8']/c[@r='F8']").attrib.s).toEqual("7");
+
+                expect(sheet1.find("./sheetData/row[@r='18']/c[@r='B18']").attrib.s).toEqual("3");
+                expect(sheet1.find("./sheetData/row[@r='18']/c[@r='C18']").attrib.s).toEqual("4");
+                expect(sheet1.find("./sheetData/row[@r='18']/c[@r='D18']").attrib.s).toEqual("5");
+
+                // XXX: For debugging only
+                fs.writeFileSync("test/output/test-tables-merged-line-out.xlsx", newData, "binary");
+
+                done();
+            });
+
+        });
+        
         it("replaces hyperlinks in sheet", function(done) {
           fs.readFile(path.join(__dirname, "templates", "test-hyperlinks.xlsx"), function(err, data) {
             expect(err).toBeNull();
@@ -628,6 +679,66 @@ describe("CRUD operations", function() {
 
             // XXX: For debugging only
             fs.writeFileSync("test/output/test9.xlsx", newData, "binary");
+
+            done();
+          });
+        });
+
+        it("moved hyperlinks in sheet", function(done) {
+          fs.readFile(path.join(__dirname, "templates", "test-moved-hyperlinks.xlsx"), function(err, data) {
+            expect(err).toBeNull();
+
+            var t = new XlsxTemplate(data);
+
+            t.substitute(1, {
+              email: "john@bob.com",
+              subject: "hello",
+              url: "http://www.google.com",
+              domain: "google",
+              rows: [{
+                name: 'One',
+                amount: 1,
+              }, {
+                name: 'Two',
+                amount: 2,
+              }, {
+                name: 'Three',
+                amount: 3,
+              }],
+              list: ['A', 'B', 'C', 'D']
+            });
+
+            var newData = t.generate();
+
+            var sharedStrings = etree.parse(t.archive.file("xl/sharedStrings.xml").asText()).getroot(),
+              sheet1        = etree.parse(t.archive.file("xl/worksheets/sheet1.xml").asText()).getroot(),
+              rels          = etree.parse(t.archive.file("xl/worksheets/_rels/sheet1.xml.rels").asText()).getroot()
+            ;
+
+            // Every hyperlink has being substituted
+            expect(rels.find("./Relationship[@Id='rId1']").attrib.Target).toEqual("mailto:john@bob.com?subject=Hello%20hello");
+            expect(rels.find("./Relationship[@Id='rId2']").attrib.Target).toEqual("http://www.google.com");
+            expect(rels.find("./Relationship[@Id='rId3']").attrib.Target).toEqual("mailto:john@bob.com?subject=Hello%20hello");
+            expect(rels.find("./Relationship[@Id='rId4']").attrib.Target).toEqual("http://www.google.com");
+            expect(rels.find("./Relationship[@Id='rId5']").attrib.Target).toEqual("mailto:john@bob.com?subject=Hello%20hello");
+            expect(rels.find("./Relationship[@Id='rId6']").attrib.Target).toEqual("http://www.google.com");
+
+            // Hyperlinks have moved
+            expect(sheet1.find("./hyperlinks/hyperlink[@ref='B7']")).not.toBeNull(); // before table and list - unchanged
+            expect(sheet1.find("./hyperlinks/hyperlink[@ref='C7']")).not.toBeNull(); // before table and list - unchanged
+
+            expect(sheet1.find("./hyperlinks/hyperlink[@ref='B14']")).toBeNull(); // pushed down
+            expect(sheet1.find("./hyperlinks/hyperlink[@ref='B16']")).not.toBeNull(); // pushed down
+            expect(sheet1.find("./hyperlinks/hyperlink[@ref='C14']")).toBeNull(); // pushed down
+            expect(sheet1.find("./hyperlinks/hyperlink[@ref='C16']")).not.toBeNull(); // pushed down
+
+            expect(sheet1.find("./hyperlinks/hyperlink[@ref='F14']")).toBeNull(); // pushed down and accross
+            expect(sheet1.find("./hyperlinks/hyperlink[@ref='I16']")).not.toBeNull(); // pushed down and accross
+            expect(sheet1.find("./hyperlinks/hyperlink[@ref='G14']")).toBeNull(); // pushed down and accross
+            expect(sheet1.find("./hyperlinks/hyperlink[@ref='J16']")).not.toBeNull(); // pushed down and accross
+
+            // XXX: For debugging only
+            fs.writeFileSync("test/output/test-moved-hyperlinks.xlsx", newData, "binary");
 
             done();
           });
@@ -1035,6 +1146,41 @@ describe("CRUD operations", function() {
                 //TODO : How can i compare the jpg file in the archive with my imgB64 variable ?
                 //var image = t.archive.file("xl/media/image1.jpg");
                 fs.writeFileSync("test/output/insert_image.xlsx", newData, "binary");
+                done();
+            });
+        });
+
+        it("Insert imageincells and create rels", function(done) {
+            fs.readFile(path.join(__dirname, 'templates', 'test-insert-images_in_cell.xlsx'), function(err, data) {
+                expect(err).toBeNull();
+                var option = {
+                    imageRootPath : path.join(__dirname, 'templates', 'dataset')
+                }
+                var t = new XlsxTemplate(data, option);
+                var imgB64 = 'iVBORw0KGgoAAAANSUhEUgAAALAAAAA2CAYAAABnXhObAAAAAXNSR0IArs4c6QAAAARnQU1BAACxjwv8YQUAAAAJcEhZcwAADsIAAA7CARUoSoAAAAUjSURBVHhe7ZtbyGVjGMfXlmmccpqRcYgZmQsTMeVYQiJzozEYJRHCcCUaNy5kyg3KhUNEhjSRbwipIcoF0pRpxiFiLsYUIqcoZ8b2/6/1vKtnv3u9+/smuXjW/v/qv593PetZa+/17f9617vetb9BVVVDSIiQ7GFRiJC0PfBwOGRbiBAMBoPat+qBRWhkYBEaGViERgYWoZGBRWhkYBEaGViERgYWoZGBRWhkYBEaGViERgYWoZGBRWhkYBEaGViERgYWoenND9oHg8EFCOdBPJ57cDzfWf5MhLPZBr9AL2LdzmZxFNTui3AdtF+dqKqtqH3F2iOg9g6EVLcFdTPW7gT1CxAuhE6FFkG/Ql9Cm7HtC4gtqL0S4ehmaRzU32XNiWA/VyGcDGGT4c11sifg2Np/hWODB8iXsAJ3p2OBznL5rS5Pfey38wJPuzpqe6HuXFdDfdRVlwRo9r+stkvboYWu/ifLlzTP7z8XOBZ63mqTDuyqjap0XNMwhGCvStjjkeNw9q6ydgtyCxEub5Za5lnMWW0xsQzbn2btEZBfh0DtWSeq6h3oQeghaBMTYCl0UtMc4U/obegN6FXoJWgGXyBPhk7wfrcgfAJdXCemgNrJ3t0RBUo98KeW+wCiIdjmMCLfnpdYNrw+y+us9ltb/6FFisOWvO4Ut/4HaHWh5j7odJdLPfAXvnYuAk/Ztuuhn61NqQcOzt/QM02zWome6gBrJzj2Jey9imC7lQjsrcn1FsmlFj33WiS34Q+/0dotyL0L3QptttR/hT32cuzvWkQec6+ZNgNvaJo1ay3SlLyxOr5Zqm6wWKI1qpluW7NULcF+zrE29zkfId08sid/3Nq7BfazwMvSRfA+j0Lv2eIui71lqgyML/Z1xO+bxepqi+RGizTAW9Ycw0yZxr+8VJP7LZJLLJJjLBIOY2qwj1XQRtOM6VmIMxM5R0CcTWmFunRSzAX1wD0ifZnpMn4kzHCita+xyLEoKX3xNC9NTB7mCwz/ZL3U4A18sEWSThpyCMRenOL+qMsgfxNXD/IKTFqXox64RyRTcqossQ4mvsna5AmLacYinxv3sw9/YNvlFNpp/HoYlldY+2uLhLMMiTchvifFGYlJcJ6YJ0IrnDDcfq703sCkvpsDfAkrMNssxGsut8Ny1O8W2xkHQPOxsdPleOPGxmx6zG3Dyz4bfI9FKe/WP2DrqRUu/6PldnsWwgvwgU3av2YhguOHBX42IA0J/Fj2N4se3/tOwg8j0qwH3+POpjnC/z1G1RCipzxn0eMfBU8y8C70AINcyKeT4iAMIy6y9u3QN02zWoP8y9D50OHQMuTOaFaVQd0JuWxVJ1i/N7SUwqI/QY5CbjG0vy33hrorBmPddCSB2YYQm7L69y3ftW6L5eshBFhiy9R6X5sEOD+caja4PG8QeROX1pXUNYQoaX6qzQV4JcnrvTo/fzSl45nWHpj4YUT+Q5y8B+YPhRJ8nDsG/qjMf9UsVVdYZJ43hpxS4+NjPsHL4Xj8EdTxUXEi7adE/Q0WKD5mNno1rOClr7FzcxkMDS6P+zDiWNIsQg3yeyHHG6kRmGcsrfP50r5zZqvD+sUIh0L8ZdznqONj4zHSZ+ui6/N6sG2xY8K2/1gzNDjG2re9MrCYHpKBp3kIIXqADCxCIwOL0MjAIjQysAiNDCxCIwOL0MjAIjQysAiNDCxCIwOL0MjAIjQysAiNDCxCIwOL0MjAIjQysAhN+x8ZQkREPbAITFX9C5ozpqaetbGcAAAAAElFTkSuQmCC';
+
+                t.substitute('init_rels', {
+                    imgB64 : imgB64,
+                });
+                var newData = t.generate();
+                var richDataFile = etree.parse(t.archive.file("xl/richData/_rels/richValueRel.xml.rels").asText()).getroot();
+                expect(richDataFile.findall("Relationship").length).toEqual(4);
+                var richDataFile = etree.parse(t.archive.file("xl/richData/rdrichvalue.xml").asText()).getroot();
+                expect(richDataFile.findall("rv").length).toEqual(4);
+                expect(parseInt(richDataFile.attrib.count)).toEqual(richDataFile.findall("rv").length);
+                var richDataFile = etree.parse(t.archive.file("xl/richData/richValueRel.xml").asText()).getroot();
+                expect(richDataFile.findall("rel").length).toEqual(4);
+                var richDataFile = etree.parse(t.archive.file("xl/metadata.xml").asText()).getroot();
+                expect(parseInt(richDataFile.find('futureMetadata').attrib.count)).toEqual(4);
+                expect(parseInt(richDataFile.find('valueMetadata').attrib.count)).toEqual(4);
+                expect(richDataFile.find('futureMetadata').findall("bk").length).toEqual(4);
+                expect(richDataFile.find('valueMetadata').findall("bk").length).toEqual(4);
+                var sheet1 = etree.parse(t.archive.file("xl/worksheets/sheet1.xml").asText()).getroot();
+                expect(sheet1.find("./sheetData/row[@r='3']/c[@r='B3']").attrib.vm).toEqual("1");
+                expect(sheet1.find("./sheetData/row[@r='5']/c[@r='K5']").attrib.vm).toEqual("2");
+                expect(sheet1.find("./sheetData/row[@r='6']/c[@r='D6']").attrib.vm).toEqual("3");
+                expect(sheet1.find("./sheetData/row[@r='10']/c[@r='H10']").attrib.vm).toEqual("4");
+                fs.writeFileSync('test/output/insert_imageincell.xlsx', newData, 'binary');
                 done();
             });
         });
