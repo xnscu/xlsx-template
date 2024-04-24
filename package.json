@@ -1,6 +1,6 @@
 {
   "name": "@xnscu/xlsx-template",
-  "version": "1.4.6",
+  "version": "1.4.5",
   "description": "Generate .xlsx (Excel) files from templates built in Excel",
   "main": "./lib/index",
   "files": [
@@ -82,7 +82,7 @@
     "postg": "yarn postpush",
     "compile": "tsc",
     "test": "npm run compile && jest",
-    "rc": "git add . &&  git commit -am",
+    "rc": "yarn push",
     "postrc": "git push origin master",
     "prepublishOnly": "npm run compile"
   },
