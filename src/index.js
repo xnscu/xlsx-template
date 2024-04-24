@@ -806,6 +806,20 @@ class Workbook {
     // for `table` tokens), `full` (boolean indicating whether this placeholder
     // is the entirety of the string) and `type` (one of `table` or `cell`)
     extractPlaceholders(string) {
+        // first try simple pattern |a.b|
+        var table_re = /^\|([^.\s]+)\.([^.\s]+)\|$/
+        var table_match = table_re.exec(string)
+        if (table_match) {
+          return [
+            {
+              placeholder: table_match[0],
+              type: 'table',
+              name: table_match[1],
+              key: table_match[2],
+              full: true
+            }
+          ]
+        }
         // Yes, that's right. It's a bunch of brackets and question marks and stuff.
         var re = /\${(?:(.+?):)?(.+?)(?:\.(.+?))?(?::(.+?))??}/g;
 
