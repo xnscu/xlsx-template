@@ -1,6 +1,6 @@
 {
   "name": "@xnscu/xlsx-template",
-  "version": "1.4.4",
+  "version": "1.5.0",
   "description": "Generate .xlsx (Excel) files from templates built in Excel",
   "main": "./lib/index",
   "files": [
@@ -68,6 +68,7 @@
     "typescript": "^3.9.7"
   },
   "scripts": {
+    "prerc": "npm --no-git-tag-version version minor",
     "commit": "git add . && git commit -am ",
     "c": "yarn commit",
     "push": "yarn commit",
